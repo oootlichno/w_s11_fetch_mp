@@ -1,24 +1,81 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const initialForm = { name: '', breed: '', adopted: false }
+const initialForm = {
+  name: "",
+  breed: "",
+  adopted: false,
+};
 
-// Use this form for both POST and PUT requests!
-export default function DogForm() {
-  const [values, setValues] = useState(initialForm)
-  const onSubmit = (event) => {
+export default function DogForm({ dog, reset, getDogs }) {
+  const navigate = useNavigate();
+  const [values, setValues] = useState(initialForm);
+  const [breeds, setBreeds] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3003/api/dogs/breeds")
+      .then((res) => res.json())
+      .then((data) => setBreeds(data.toSorted())) 
+      .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    if (dog) setValues(dog);
+    else setValues(initialForm);
+  }, [dog]);
+
+  const postDog = () => {
+fetch('/api/dogs', {
+  method: 'POST',
+body: JSON.stringify(values),
+headers: new Headers({'Content-Type': 'application/json'})
+  })
+  .then(res => {
+    if(!res.ok) throw new Error('Problem POSTing dog')
+    getDogs()
+  navigate('/')
+  })
+  .catch(err => console.error(err))
+  }
+
+  const putDog = () => {
+fetch(`/api/dogs/${values.id}`, {
+  method: 'PUT',
+body: JSON.stringify(values),
+headers: new Headers({'Content-Type': 'application/json'})
+  })
+  .then(res => {
+    if(!res.ok) throw new Error('Problem POSTing dog')
+    getDogs()
+  reset()
+  navigate('/')
+  })
+  .catch(err => console.error(err))
+  }
+
+  const onReset = (event) => {
     event.preventDefault()
+    setValues(initialForm)
+    reset()
   }
+
+  const onSubmit = (event) => {
+    event.preventDefault();
+    const action = dog ? putDog : postDog
+    action()
+  };
+
   const onChange = (event) => {
-    const { name, value, type, checked } = event.target
+    const { name, value, type, checked } = event.target;
     setValues({
-      ...values, [name]: type === 'checkbox' ? checked : value
-    })
-  }
+      ...values,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
   return (
     <div>
-      <h2>
-        Create Dog
-      </h2>
+      <h2>{dog ? "Update Dog" : "Create dog"}</h2>
       <form onSubmit={onSubmit}>
         <input
           name="name"
@@ -34,10 +91,15 @@ export default function DogForm() {
           aria-label="Dog's breed"
         >
           <option value="">---Select Breed---</option>
-          {/* Populate this dropdown using data obtained from the API */}
+          {breeds.map((br) => (
+            <option key={br} value={br}>
+              {br}
+            </option>
+          ))}
         </select>
         <label>
-          Adopted: <input
+          Adopted:
+          <input
             type="checkbox"
             name="adopted"
             checked={values.adopted}
@@ -46,12 +108,14 @@ export default function DogForm() {
           />
         </label>
         <div>
-          <button type="submit">
-            Create Dog
+          <button type="submit">{dog ? "Update Dog" : "Create dog"} </button>
+          <button type="button" onClick={onReset} aria-label="Reset form">
+            {" "}
+            {/* Added type="button" and reset function */}
+            Reset
           </button>
-          <button aria-label="Reset form">Reset</button>
         </div>
       </form>
     </div>
-  )
+  );
 }
